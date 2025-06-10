@@ -38,11 +38,10 @@ while True:
 
                     print(f'dado recebido {msgReceivedBytes}')
                     file.write(msgReceivedBytes)
-            escolha = str(input('Arquivo recebido com sucesso, gostaria de baixar mais algum? (s/n)'))
+            escolha = str(input('Arquivo recebido com sucesso, gostaria de baixar mais algum? (s/n): '))
 
             if escolha == "s" or escolha == "S":
-                print("WIP!")
-                break
+                pass
             elif escolha == "n" or escolha == "N":
                 print("nao escolhido")
                 break
