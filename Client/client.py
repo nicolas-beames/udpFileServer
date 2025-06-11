@@ -38,7 +38,7 @@ while True:
 
                     print(f'dado recebido {msgReceivedBytes}')
                     file.write(msgReceivedBytes)
-            escolha = str(input('Arquivo recebido com sucesso, gostaria de baixar mais algum? (s/n): '))
+            escolha = str(input('Arquivo recebido com sucesso, gostaria de voltar ao menu? (s/n): '))
 
             if escolha == "s" or escolha == "S":
                 pass
