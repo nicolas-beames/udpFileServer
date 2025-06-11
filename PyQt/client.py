@@ -1,13 +1,14 @@
 import sys
 import socket
 from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog
-from PySide6.QtCore import QFile
+from PySide6.QtCore import QFile, Qt
 
 sys.path.append("../Ui")
 from ui_client import Ui_MainWindow
 
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 ip, porta = "localhost", 55555
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -49,10 +50,12 @@ class MainWindow(QMainWindow):
                 lista.remove(item)
         lista.pop()
 
-        #print(f'final: {lista}')
-
+        # Verifica se o item ja está na lista
+        # caso não estiver ele insere
         for item in lista:
-            self.ui.SrvFiles.addItem(str(item[:-1]))
+            if not self.ui.SrvFiles.findItems(item[:-1], Qt.MatchFixedString | Qt.MatchCaseSensitive):
+                self.ui.SrvFiles.addItem(str(item[:-1]))
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
