@@ -1,6 +1,28 @@
 import socket
-import threading
-import json
+import random
+
+def recebe_com_perda(client, buffer_size, loss_rate=0.1):
+    """
+    Simula a perda de pacotes ao receber.
+    loss_rate: probabilidade de perda (ex: 0.1 = 10%).
+    """
+    while True:
+        msg, addr = client.recvfrom(buffer_size)
+        if random.random() < loss_rate:
+            print("** Pacote PERDIDO (simulado) **")
+            continue  # ignora este pacote, simulando perda
+        return msg, addr
+
+def envia_ack_com_perda(client, ack_bytes, addr, loss_rate=0.1):
+    """
+    Simula a perda de ACKs ao enviar.
+    """
+    if random.random() < loss_rate:
+        print(f"** ACK PERDIDO (simulado) para #{int.from_bytes(ack_bytes, 'big')} **")
+        return  # não envia o ACK
+    client.sendto(ack_bytes, addr)
+    print(f"ACK #{int.from_bytes(ack_bytes, 'big')} enviado")
+
 
 while True:
     client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
