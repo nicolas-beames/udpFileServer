@@ -21,8 +21,9 @@ while True:
                 print(msgReceivedBytes.decode())
                 break
 
-            print(f'dado recebido {msgReceivedBytes}')
+            print(f'dado recebido {msgReceivedBytes.decode()}')
             break
+
         case 2:
             msgClient = str(input("Qual arquivo gostaria de baixar? (arquivo.extensao): "))
             client.sendto(msgClient.encode(), ('localhost', 55555))
@@ -30,9 +31,10 @@ while True:
             pacotesRecebidos = {}
             with open('copia_' + msgClient, 'wb') as file:
                 while True:
-                    msgReceivedBytes, addressServer = client.recvfrom(1000000)
+                    msgReceivedBytes, addressServer = client.recvfrom(2048)
 
                     if msgReceivedBytes == b'EOF':
+                        print("Arquivo recebido com sucesso!")
                         break
 
                     if msgReceivedBytes.startswith(b'ERRO'):
@@ -46,13 +48,18 @@ while True:
 
                     pacotesRecebidos[numero_pacote] = dados_pacote
 
+                    ack = numero_pacote.to_bytes(4, byteorder='big')
+                    client.sendto(ack, addressServer)
+
+                    print(f"ACK N: {numero_pacote} enviado")
+
                 # Depois de receber todos os pacotes, escreve o arquivo na ordem correta
                 for i in range(len(pacotesRecebidos)):
                     file.write(pacotesRecebidos[i])
             escolha = str(input('Arquivo recebido com sucesso, gostaria de baixar mais algum? (s/n): '))
 
-            if escolha == "s" or escolha == "S":
+            if escolha.lower() == "s":
                 pass
-            elif escolha == "n" or escolha == "N":
-                print("nao escolhido")
+            else:
+                print("Obrigado, volte sempre!")
                 break
