@@ -1,5 +1,6 @@
 import socket
 import os
+import threading
 
 #Diretorio base onde fica os arquivos
 basedir = 'arquivos/'
@@ -9,8 +10,82 @@ server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 server.bind(('localhost', 55555))
 print('Servidor escutando')
 
+#váriaveis de controle do Go-Back-N
+tamanhoJanela = 4
+timeout = 5  # segundos
+tamanho_pacote = 1024
+
+base = 0 #primeiro numero da sequência
+proxNum = 0 #próximo numero a ser enviado
+eventAck = threading.Event()
+addClient = None
+pacotes = []
+
+socket.timeout(timeout)
+
+# Envia um pacote com numeração sequencial (4 bytes de header + dados)
+def enviaPacote(numSeq):
+    if numSeq < len(pacotes):
+        seq_bytes = numSeq.to_bytes(4, byteorder='big')
+        mensagem = seq_bytes + pacotes[numSeq]
+        server.sendto(mensagem, addClient)
+        print(f"Enviado pacote n{numSeq}")
+
+def recebeAck():
+    global base
+    while base < len(pacotes):
+        try:
+            # server.settimeout(timeout)
+            ackBytes, _ = server.recvfrom(1024)
+            ackNum = int.from_bytes(ackBytes, byteorder='big')
+            print(f"ACK n{ackNum} recebido")
+            if ackNum >= base:
+                base = ackNum + 1
+                eventAck.set()
+        except socket.timeout:
+            print("Timeout! Reenviando janela...")
+            eventAck.set()
+
+def enviaArquivo(nome_arquivo):
+    global pacotes, base, proxNum
+
+    # Lê o arquivo e divide em pacotes
+    try:
+        with open(f'{basedir}/{nome_arquivo}', 'rb') as file:
+            data = file.read()
+            pacotes = [data[i:i + tamanho_pacote] for i in range(0, len(data), tamanho_pacote)]
+    except FileNotFoundError:
+        server.sendto(b'ERRO: arquivo nao encontrado', addClient)
+        return
+
+    print(f"Total de pacotes: {len(pacotes)}")
+
+    base = 0
+    proxNum = 0
+    eventAck.clear()
+
+    #inicia a thread para receber os ACKs
+    ack_thread = threading.Thread(target=recebeAck)
+    ack_thread.start()
+
+    #loop de envio com janela deslizante
+    while base < len(pacotes):
+        while proxNum < base + tamanhoJanela and proxNum < len(pacotes):
+            enviaPacote(proxNum)
+            proxNum += 1
+
+        eventAck.wait(timeout)
+        eventAck.clear()
+
+    ack_thread.join()
+
+    # Envia EOF
+    server.sendto(b'EOF', addClient)
+    print("Arquivo enviado com sucesso.")
+
 while True:
     msgClientBytes, addressClient = server.recvfrom(1024) #recebe a mensagem do cliente e armazena tanto a mensagem como também o endereço
+    addClient = addressClient #armazena o endereço do cliente em outra variavel que irá ser utilizada no fluxo
     msgClientString = msgClientBytes.decode() #decotifica a mensagem para string
 
     print(f'arquivo escolhido pelo usuario: {msgClientString}')
@@ -28,36 +103,6 @@ while True:
                 server.sendto(str(Arquivos).encode(), addressClient)
                 print(f"Enviado Lista de arquivos para: {addressClient}")
     else:
-        try:
-            with open(f'arquivos/{msgClientString}', 'rb') as file:
-                data = file.read()
-                
-                print(f'Tamanho total dos dados: {len(data)} bytes')
+       print(f"Arquivo solicitado pelo cliente: {msgClientString}")
+       enviaArquivo(msgClientString)
 
-                tamanho_pacote = 1024
-                pacotes = []
-
-                #a cada loop, pega um pedaço do arquivo com tamanho definido
-                for i in range(0, len(data), tamanho_pacote):
-                    pacotes.append(data[i:i+tamanho_pacote])
-
-                print(f"Número de pacotes: {len(pacotes)}")
-
-                if pacotes:
-                    print(f"Tamanho do primeiro pacote: {len(pacotes[0])} bytes")
-                    numero_pacote = 0
-                    for item in pacotes:
-                        # Converte o número do pacote para 4 bytes
-                        seq_bytes = numero_pacote.to_bytes(4, byteorder='big')
-                        mensagem = seq_bytes + item  # concatena o número com o pacote
-                        server.sendto(mensagem, addressClient)
-                        numero_pacote += 1
-
-                    server.sendto(b'EOF', addressClient)
-                else:
-                    print("A lista de pacotes está vazia.")
-
-
-               
-        except FileNotFoundError:
-            server.sendto(b'ERRO: arquivo nao encontrado', addressClient)
