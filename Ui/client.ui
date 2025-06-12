@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>980</width>
+    <width>979</width>
     <height>720</height>
    </rect>
   </property>
@@ -26,30 +26,76 @@
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QPushButton" name="but_upload">
+   <widget class="QWidget" name="verticalWidget" native="true">
     <property name="geometry">
      <rect>
-      <x>420</x>
-      <y>370</y>
-      <width>88</width>
-      <height>34</height>
+      <x>630</x>
+      <y>500</y>
+      <width>281</width>
+      <height>171</height>
      </rect>
     </property>
-    <property name="text">
-     <string>Upload</string>
+    <property name="layoutDirection">
+     <enum>Qt::LayoutDirection::LeftToRight</enum>
+    </property>
+    <property name="autoFillBackground">
+     <bool>false</bool>
+    </property>
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <widget class="QProgressBar" name="prog">
+       <property name="value">
+        <number>0</number>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="but_listar">
+       <property name="text">
+        <string>Listar Arquivos</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="but_baixar">
+       <property name="text">
+        <string>Baixar</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="but_upload">
+       <property name="layoutDirection">
+        <enum>Qt::LayoutDirection::LeftToRight</enum>
+       </property>
+       <property name="text">
+        <string>Upload</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QListWidget" name="SrvFiles">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>50</y>
+      <width>511</width>
+      <height>641</height>
+     </rect>
     </property>
    </widget>
-   <widget class="QLabel" name="label_upload">
+   <widget class="QLabel" name="lab_arquivos">
     <property name="geometry">
      <rect>
-      <x>390</x>
-      <y>290</y>
-      <width>151</width>
-      <height>61</height>
+      <x>150</x>
+      <y>20</y>
+      <width>171</width>
+      <height>31</height>
      </rect>
     </property>
     <property name="text">
-     <string>File Upload </string>
+     <string>Arquivos do Servidor</string>
     </property>
     <property name="alignment">
      <set>Qt::AlignmentFlag::AlignCenter</set>
