@@ -17,6 +17,37 @@ class MainWindow(QMainWindow):
         self.ui.setupUi(self)
         self.ui.but_upload.clicked.connect(self.upload_clicked)
         self.ui.but_listar.clicked.connect(self.listar_clicked)
+        self.ui.but_baixar.clicked.connect(self.baixar_clicked)
+
+
+    def listar_clicked(self):
+        print("Listar Clicado")
+        client.sendto("LIST".encode(), (ip, porta))
+        msgReceivedBytes, addressServer = client.recvfrom(1024)
+
+        if msgReceivedBytes.startswith(b'ERRO'):
+            print("Erro!")
+
+        # Tratativa para a lista dos arquivos recebida do Srv
+        lista = str(msgReceivedBytes).split("\'")
+        lista = list(lista)
+        print(f'antes tratativa: {lista}')
+        for item in lista:
+            if item.endswith('Entry \\') or not item.endswith("\\"):
+                print(f'rem {item}')
+                lista.remove(item)
+        lista.pop()
+        lista.pop(0)
+        # print(lista)
+        # for item in lista:
+        #     if not item.endswith("\\"):
+        #         lista.remove(item)
+
+        # Verifica se o item ja está na lista
+        # caso não estiver ele insere
+        for item in lista:
+            if not self.ui.SrvFiles.findItems(item[:-1], Qt.MatchFixedString | Qt.MatchCaseSensitive):
+                self.ui.SrvFiles.addItem(str(item[:-1]))
 
     def upload_clicked(self):
         print("DEBUG: Upload Clicado")
@@ -31,30 +62,8 @@ class MainWindow(QMainWindow):
                 #self.file_list.addItems([str(Path(filename)) for filename in filenames])
                 pass
 
-    def listar_clicked(self):
-        print("Listar Clicado")
-        client.sendto("LIST".encode(), (ip, porta))
-        msgReceivedBytes, addressServer = client.recvfrom(1024)
-
-        if msgReceivedBytes.startswith(b'ERRO'):
-            print("Erro!")
-
-        # Tratativa para a lista dos arquivos recebida do Srv
-        lista = str(msgReceivedBytes).split("\'")
-        lista = list(lista)
-        for item in lista:
-            if item.endswith('"<DirEntry \\'):
-                lista.remove(item)
-        for item in lista:
-            if not item.endswith("\\"):
-                lista.remove(item)
-        lista.pop()
-
-        # Verifica se o item ja está na lista
-        # caso não estiver ele insere
-        for item in lista:
-            if not self.ui.SrvFiles.findItems(item[:-1], Qt.MatchFixedString | Qt.MatchCaseSensitive):
-                self.ui.SrvFiles.addItem(str(item[:-1]))
+    def baixar_clicked(self):
+        pass
 
 
 if __name__ == "__main__":

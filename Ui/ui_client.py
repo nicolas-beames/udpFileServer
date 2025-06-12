@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'clientnUaEsn.ui'
+## Form generated from reading UI file 'clientoluPcL.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.9.1
 ##
@@ -16,39 +16,53 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QLabel, QListWidget, QListWidgetItem,
-    QMainWindow, QPushButton, QSizePolicy, QStatusBar,
-    QVBoxLayout, QWidget)
+    QMainWindow, QProgressBar, QPushButton, QSizePolicy,
+    QStatusBar, QVBoxLayout, QWidget)
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(980, 720)
+        MainWindow.resize(979, 720)
         MainWindow.setMinimumSize(QSize(640, 480))
         MainWindow.setMaximumSize(QSize(980, 720))
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.verticalWidget = QWidget(self.centralwidget)
         self.verticalWidget.setObjectName(u"verticalWidget")
-        self.verticalWidget.setGeometry(QRect(630, 530, 281, 141))
+        self.verticalWidget.setGeometry(QRect(630, 500, 281, 171))
+        self.verticalWidget.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+        self.verticalWidget.setAutoFillBackground(False)
         self.verticalLayout = QVBoxLayout(self.verticalWidget)
         self.verticalLayout.setObjectName(u"verticalLayout")
-        self.but_upload = QPushButton(self.verticalWidget)
-        self.but_upload.setObjectName(u"but_upload")
+        self.prog = QProgressBar(self.verticalWidget)
+        self.prog.setObjectName(u"prog")
+        self.prog.setValue(0)
 
-        self.verticalLayout.addWidget(self.but_upload)
+        self.verticalLayout.addWidget(self.prog)
 
         self.but_listar = QPushButton(self.verticalWidget)
         self.but_listar.setObjectName(u"but_listar")
 
         self.verticalLayout.addWidget(self.but_listar)
 
+        self.but_baixar = QPushButton(self.verticalWidget)
+        self.but_baixar.setObjectName(u"but_baixar")
+
+        self.verticalLayout.addWidget(self.but_baixar)
+
+        self.but_upload = QPushButton(self.verticalWidget)
+        self.but_upload.setObjectName(u"but_upload")
+        self.but_upload.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+
+        self.verticalLayout.addWidget(self.but_upload)
+
         self.SrvFiles = QListWidget(self.centralwidget)
         self.SrvFiles.setObjectName(u"SrvFiles")
-        self.SrvFiles.setGeometry(QRect(-5, 61, 561, 641))
+        self.SrvFiles.setGeometry(QRect(0, 50, 511, 641))
         self.lab_arquivos = QLabel(self.centralwidget)
         self.lab_arquivos.setObjectName(u"lab_arquivos")
-        self.lab_arquivos.setGeometry(QRect(190, 20, 171, 31))
+        self.lab_arquivos.setGeometry(QRect(150, 20, 171, 31))
         self.lab_arquivos.setAlignment(Qt.AlignmentFlag.AlignCenter)
         MainWindow.setCentralWidget(self.centralwidget)
         self.statusbar = QStatusBar(MainWindow)
@@ -62,8 +76,9 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
-        self.but_upload.setText(QCoreApplication.translate("MainWindow", u"Upload", None))
         self.but_listar.setText(QCoreApplication.translate("MainWindow", u"Listar Arquivos", None))
+        self.but_baixar.setText(QCoreApplication.translate("MainWindow", u"Baixar", None))
+        self.but_upload.setText(QCoreApplication.translate("MainWindow", u"Upload", None))
         self.lab_arquivos.setText(QCoreApplication.translate("MainWindow", u"Arquivos do Servidor", None))
     # retranslateUi
 
