@@ -48,6 +48,8 @@ while True:
 
         case 2:
             msgClient = str(input("Qual arquivo gostaria de baixar? (arquivo.extensao): "))
+            
+            print(msgClient)
             client.sendto(msgClient.encode(), ('localhost', 55555))
 
             pacotesRecebidos = {}

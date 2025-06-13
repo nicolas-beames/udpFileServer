@@ -50,9 +50,9 @@
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="but_listar">
+      <widget class="QPushButton" name="but_atualizar">
        <property name="text">
-        <string>Listar Arquivos</string>
+        <string>Atualizar</string>
        </property>
       </widget>
      </item>
