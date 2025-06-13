@@ -3,7 +3,7 @@ import os
 import threading
 
 #Diretorio base onde fica os arquivos
-basedir = 'arquivos/'
+basedir = 'Arquivos/'
 
 #cria a conexão utilizando o protocolo UDP
 server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -90,7 +90,34 @@ while True:
 
     print(f'arquivo escolhido pelo usuario: {msgClientString}')
 
-    if msgClientString == "LIST":
+    if msgClientString.startswith("UPLOAD "):
+        nome_arquivo = msgClientString[7:]
+        print(f"Recebendo upload de: {nome_arquivo}")
+
+        pacotesRecebidos = {}
+        while True:
+            pacote, _ = server.recvfrom(2048)
+
+            if pacote == b'EOF':
+                print(f"Upload de {nome_arquivo} finalizado.")
+                break
+
+            numero_pacote = int.from_bytes(pacote[:4], 'big')
+            dados = pacote[4:]
+            pacotesRecebidos[numero_pacote] = dados
+            print(f"Pacote #{numero_pacote} recebido ({len(dados)} bytes)")
+
+            ack = numero_pacote.to_bytes(4, 'big')
+            server.sendto(ack, addressClient)
+
+        # salva os pacotes na pasta Arquivos/
+        os.makedirs('Arquivos', exist_ok=True)
+        with open(os.path.join('Arquivos', nome_arquivo), 'wb') as file:
+            for i in range(len(pacotesRecebidos)):
+                file.write(pacotesRecebidos[i])
+        continue
+
+    elif msgClientString == "LIST":
         Arquivos = []
         with os.scandir(basedir) as arquivos:
             for arquivo in arquivos:
