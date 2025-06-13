@@ -3,7 +3,7 @@ import os
 import threading
 
 #Diretorio base onde fica os arquivos
-basedir = 'arquivos/'
+basedir = 'Arquivos/'
 
 #cria a conexão utilizando o protocolo UDP
 server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
