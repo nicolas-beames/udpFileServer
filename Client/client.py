@@ -59,6 +59,7 @@ while True:
     print("1 - Listar arquivos")
     print("2 - Baixar do Servidor")
     print("3 - Fazer upload")
+    print("4 - Atualizar Servidor")
 
     try:
         opt = int(input('Digite uma opção: '))
@@ -129,6 +130,61 @@ while True:
             print('opção 3')
             fazerUpload()
             break
+
+        case 4:
+            print('Enviando arquivos da pasta Uploads para o servidor com Go-Back-N...')
+
+            arquivos = os.listdir("Uploads")
+            if not arquivos:
+                print("Nenhum arquivo para enviar.")
+                break
+
+            for nome_arquivo in arquivos:
+                caminho_arquivo = os.path.join("Uploads", nome_arquivo)
+                try:
+                    with open(caminho_arquivo, 'rb') as file:
+                        dados = file.read()
+                        pacotes = [dados[i:i + 1024] for i in range(0, len(dados), 1024)]
+                except FileNotFoundError:
+                    print(f"Arquivo {nome_arquivo} não encontrado.")
+                    continue
+
+                base = 0
+                proxNum = 0
+                tamanhoJanela = 4
+                timeout = 2
+
+                # Envia comando de upload com o nome do arquivo
+                comando = f"UPLOAD {nome_arquivo}"
+                client.sendto(comando.encode(), ('localhost', 55555))
+
+                client.settimeout(timeout)
+                print(f"Iniciando envio de {nome_arquivo} ({len(pacotes)} pacotes)...")
+
+                acks_recebidos = set()
+
+                while base < len(pacotes):
+                    while proxNum < base + tamanhoJanela and proxNum < len(pacotes):
+                        seq_bytes = proxNum.to_bytes(4, 'big')
+                        pacote = seq_bytes + pacotes[proxNum]
+                        client.sendto(pacote, ('localhost', 55555))
+                        print(f"Enviado pacote {proxNum}")
+                        proxNum += 1
+
+                    try:
+                        ackBytes, _ = client.recvfrom(1024)
+                        ackNum = int.from_bytes(ackBytes, byteorder='big')
+                        print(f"ACK {ackNum} recebido")
+
+                        if ackNum >= base:
+                            base = ackNum + 1
+                    except socket.timeout:
+                        print("Timeout. Reenviando janela...")
+                        proxNum = base  # reinicia do último ACK válido
+
+                # Envia EOF
+                client.sendto(b'EOF', ('localhost', 55555))
+                print(f"{nome_arquivo} enviado com sucesso.\n")
 
         case _:
             print("Opção inválida. Tente novamente.")
