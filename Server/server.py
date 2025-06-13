@@ -121,14 +121,15 @@ while True:
         Arquivos = []
         with os.scandir(basedir) as arquivos:
             for arquivo in arquivos:
-                Arquivos.append(str(arquivo))
+                print(f'arquivo: {arquivo}')
+                Arquivos.append(str(arquivo).split("'")[1])
 
         if not Arquivos:
             print("Sem arquivos na pasta")
-            server.sendto("Pasta Vazia...".encode(), addressClient)
+            server.sendto("O servidor não possui nenhum arquivo, faça um upload para atualiza-lo!".encode(), addressClient)
         else:
-                server.sendto(str(Arquivos).encode(), addressClient)
-                print(f"Enviado Lista de arquivos para: {addressClient}")
+            server.sendto(f'Lista de arquivos: {str(Arquivos)}'.encode(), addressClient)
+            print(f"Enviado Lista de arquivos para: {addressClient}")
     else:
        print(f"Arquivo solicitado pelo cliente: {msgClientString}")
        enviaArquivo(msgClientString)

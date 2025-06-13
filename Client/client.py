@@ -61,6 +61,8 @@ while True:
     print("3 - Fazer upload")
     print("4 - Atualizar Servidor")
 
+    dontCloseDownloads = True
+
     try:
         opt = int(input('Digite uma opção: '))
     except ValueError:
@@ -83,53 +85,53 @@ while True:
                 print(msgReceivedBytes.decode())
                 break
 
-            print(f'dado recebido {msgReceivedBytes.decode()}')
-            break
+            print(msgReceivedBytes.decode())
+            pass
 
         case 2:
-            msgClient = str(input("Qual arquivo gostaria de baixar? (arquivo.extensao): "))
-            client.sendto(msgClient.encode(), ('localhost', 55555))
+            while dontCloseDownloads:
+                msgClient = str(input("Qual arquivo gostaria de baixar? (arquivo.extensao): "))
+                client.sendto(msgClient.encode(), ('localhost', 55555))
 
-            pacotesRecebidos = {}
-            with open('copia_' + msgClient, 'wb') as file:
-                while True:
-                    msgReceivedBytes, addressServer = client.recvfrom(2048)
+                pacotesRecebidos = {}
+                with open(os.path.join('Downloads', msgClient), 'wb') as file:
+                    while True:
+                        msgReceivedBytes, addressServer = client.recvfrom(2048)
 
-                    if msgReceivedBytes == b'EOF':
-                        print("Arquivo recebido com sucesso!")
-                        break
+                        if msgReceivedBytes == b'EOF':
+                            break
 
-                    if msgReceivedBytes.startswith(b'ERRO'):
-                        print(msgReceivedBytes.decode())
-                        break
+                        if msgReceivedBytes.startswith(b'ERRO'):
+                            print(msgReceivedBytes.decode())
+                            break
 
-                    numero_pacote = int.from_bytes(msgReceivedBytes[:4], byteorder='big')
-                    dados_pacote = msgReceivedBytes[4:]
+                        numero_pacote = int.from_bytes(msgReceivedBytes[:4], byteorder='big')
+                        dados_pacote = msgReceivedBytes[4:]
 
-                    print(f'Pacote #{numero_pacote} recebido com {len(dados_pacote)} bytes')
+                        print(f'Pacote #{numero_pacote} recebido com {len(dados_pacote)} bytes')
 
-                    pacotesRecebidos[numero_pacote] = dados_pacote
+                        pacotesRecebidos[numero_pacote] = dados_pacote
 
-                    ack = numero_pacote.to_bytes(4, byteorder='big')
-                    client.sendto(ack, addressServer)
+                        ack = numero_pacote.to_bytes(4, byteorder='big')
+                        client.sendto(ack, addressServer)
 
-                    print(f"ACK N: {numero_pacote} enviado")
+                        print(f"ACK N: {numero_pacote} enviado")
 
-                # Depois de receber todos os pacotes, escreve o arquivo na ordem correta
-                for i in range(len(pacotesRecebidos)):
-                    file.write(pacotesRecebidos[i])
-            escolha = str(input('Arquivo recebido com sucesso, gostaria de baixar mais algum? (s/n): '))
+                    # Depois de receber todos os pacotes, escreve o arquivo na ordem correta
+                    for i in range(len(pacotesRecebidos)):
+                        file.write(pacotesRecebidos[i])
+                escolha = str(input('Arquivo recebido com sucesso, gostaria de baixar mais algum? (s/n): '))
 
-            if escolha.lower() == "s":
-                pass
-            else:
-                print("Obrigado, volte sempre!")
-                break
+                if escolha.lower() == "s":
+                    dontCloseDownloads = True
+                else:
+                    dontCloseDownloads = False
+                    pass
 
         case 3:
             print('opção 3')
             fazerUpload()
-            break
+            pass
 
         case 4:
             print('Enviando arquivos da pasta Uploads para o servidor com Go-Back-N...')
