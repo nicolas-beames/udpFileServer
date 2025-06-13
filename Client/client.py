@@ -1,5 +1,8 @@
 import socket
 import random
+import os
+import tkinter as tk
+from tkinter import filedialog
 
 def recebe_com_perda(client, buffer_size, loss_rate=0.1):
     """
@@ -23,13 +26,49 @@ def envia_ack_com_perda(client, ack_bytes, addr, loss_rate=0.1):
     client.sendto(ack_bytes, addr)
     print(f"ACK #{int.from_bytes(ack_bytes, 'big')} enviado")
 
+def criaArquivo(origem, destino):
+    with open(origem, 'rb') as origemArquivo, open(destino,'wb') as destinoArquivo:
+        while True:
+            chunk = origemArquivo.read(1024 * 1024)
+            if not chunk:
+                break
+            destinoArquivo.write(chunk)
+
+def fazerUpload():
+    root = tk.Tk()
+    root.withdraw()
+
+    caminhoArquivo = filedialog.askopenfilename(title="Selecione o arquivo que deseja inserir")
+
+    root.update()  # a seleção de arquivo ocorre antes de fechar a tela
+    root.destroy()  # fecha a tela após seleção do arquivo
+
+    if caminhoArquivo:
+        nomeArquivo = os.path.basename(caminhoArquivo)
+        pastaDestino = "Uploads"
+        os.makedirs(pastaDestino, exist_ok=True)
+    
+        destino = os.path.join(pastaDestino, nomeArquivo)
+        criaArquivo(caminhoArquivo, destino)
 
 while True:
     client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-    print("1- Listar")
-    print("2- Baixar do Servidor")
-    opt = int(input('digite um numero: '))
+    print("\n=== MENU ===")
+    print("0 - Sair")
+    print("1 - Listar arquivos")
+    print("2 - Baixar do Servidor")
+    print("3 - Fazer upload")
+
+    try:
+        opt = int(input('Digite uma opção: '))
+    except ValueError:
+        print("Digite um número válido.")
+        continue
+
+    if opt == 0:
+        print("Saindo...")
+        break
 
     match opt:
         case 1:
@@ -85,3 +124,12 @@ while True:
             else:
                 print("Obrigado, volte sempre!")
                 break
+
+        case 3:
+            print('opção 3')
+            fazerUpload()
+            break
+
+        case _:
+            print("Opção inválida. Tente novamente.")
+
