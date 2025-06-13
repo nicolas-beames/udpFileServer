@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'clientoluPcL.ui'
+## Form generated from reading UI file 'clientEYbBCi.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.9.1
 ##
@@ -41,10 +41,10 @@ class Ui_MainWindow(object):
 
         self.verticalLayout.addWidget(self.prog)
 
-        self.but_listar = QPushButton(self.verticalWidget)
-        self.but_listar.setObjectName(u"but_listar")
+        self.but_atualizar = QPushButton(self.verticalWidget)
+        self.but_atualizar.setObjectName(u"but_atualizar")
 
-        self.verticalLayout.addWidget(self.but_listar)
+        self.verticalLayout.addWidget(self.but_atualizar)
 
         self.but_baixar = QPushButton(self.verticalWidget)
         self.but_baixar.setObjectName(u"but_baixar")
@@ -76,7 +76,7 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
-        self.but_listar.setText(QCoreApplication.translate("MainWindow", u"Listar Arquivos", None))
+        self.but_atualizar.setText(QCoreApplication.translate("MainWindow", u"Atualizar", None))
         self.but_baixar.setText(QCoreApplication.translate("MainWindow", u"Baixar", None))
         self.but_upload.setText(QCoreApplication.translate("MainWindow", u"Upload", None))
         self.lab_arquivos.setText(QCoreApplication.translate("MainWindow", u"Arquivos do Servidor", None))

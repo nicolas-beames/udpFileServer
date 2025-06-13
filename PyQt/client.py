@@ -19,6 +19,7 @@ class MainWindow(QMainWindow):
         self.ui.but_upload.clicked.connect(self.upload_clicked)
         self.ui.but_listar.clicked.connect(self.listar_clicked)
         self.ui.but_baixar.clicked.connect(self.baixar_clicked)
+        self.listar_clicked()
         
     def listar_clicked(self):
         print("Listar Clicado")
@@ -65,33 +66,10 @@ class MainWindow(QMainWindow):
         pacotesRecebidos = {}
         with open('copia_' + msgClient, 'wb') as file:
             while True:
-                try:
-                    msgReceivedBytes, addressServer = client.recvfrom(2048)
+                msgReceivedBytes, addressServer = client.recvfrom(2048)
 
-                    if msgReceivedBytes == b'EOF':
-                        print("Arquivo recebido com sucesso!")
-                        break
-
-                    if msgReceivedBytes.startswith(b'ERRO'):
-                        print(msgReceivedBytes.decode())
-                        break
-
-                    numero_pacote = int.from_bytes(msgReceivedBytes[:4], byteorder='big')
-                    dados_pacote = msgReceivedBytes[4:]
-
-                    print(f'Pacote #{numero_pacote} recebido com {len(dados_pacote)} bytes')
-
-                    pacotesRecebidos[numero_pacote] = dados_pacote
-
-                    ack = numero_pacote.to_bytes(4, byteorder='big')
-                    client.sendto(ack, addressServer)
-
-                    print(f"ACK N: {numero_pacote} enviado")
-
-                # Depois de receber todos os pacotes, escreve o arquivo na ordem correta
-                    for i in range(len(pacotesRecebidos)):
-                        file.write(pacotesRecebidos[i])
-
+                if msgReceivedBytes == b'EOF':
+                    print("Arquivo recebido com sucesso!")
                     dlg_sucesso = QMessageBox(self)
                     dlg_sucesso.setWindowTitle("Sucesso!")
                     dlg_sucesso.setText("Arquivo baixado com sucesso!\n Ele estara na pasta do script/exe")
@@ -99,10 +77,28 @@ class MainWindow(QMainWindow):
 
                     if btn_ok == QMessageBox.Ok:
                         print("Operação concluida com exito! Finalizando...")
-                except:
-                    print("Erro!")
-                finally:
                     break
+
+                if msgReceivedBytes.startswith(b'ERRO'):
+                    print(msgReceivedBytes.decode())
+                    print("Erro")
+                    break
+
+                numero_pacote = int.from_bytes(msgReceivedBytes[:4], byteorder='big')
+                dados_pacote = msgReceivedBytes[4:]
+
+                print(f'Pacote #{numero_pacote} recebido com {len(dados_pacote)} bytes')
+
+                pacotesRecebidos[numero_pacote] = dados_pacote
+
+                ack = numero_pacote.to_bytes(4, byteorder='big')
+                client.sendto(ack, addressServer)
+
+                print(f"ACK N: {numero_pacote} enviado")
+
+            # Depois de receber todos os pacotes, escreve o arquivo na ordem correta
+            for i in range(len(pacotesRecebidos)):
+                file.write(pacotesRecebidos[i])
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
