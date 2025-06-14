@@ -68,7 +68,7 @@ def fazerUpload():
         criaArquivo(caminhoArquivo, destino)
 
 # #
-# Loop principal, responsável por manter o menu aberto e f
+# Loop principal, responsável por manter o menu aberto
 # #
 while True:
     client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # realiza a conexão com o servidor utilizando o protocolo UDP
