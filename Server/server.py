@@ -5,10 +5,12 @@ import threading # biblioteca responsável por permitir que o funcionamento ocor
 #Diretorio base onde fica os arquivos
 basedir = 'Arquivos/'
 
-#cria a conexão utilizando o protocolo UDP
+hostName = socket.gethostname()
+ipAdd = socket.gethostbyname(hostName)
+
 server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-server.bind(('localhost', 55555))
-print('Servidor escutando')
+server.bind((ipAdd, 55555))
+print(f'Servidor escutando no ip: {ipAdd} : 55555')
 
 #váriaveis de controle do Go-Back-N
 tamanhoJanela = 4 # quantidade de pacotes enviados por janela

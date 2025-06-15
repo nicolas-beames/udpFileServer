@@ -4,6 +4,24 @@ import os # biblioteca utilizada para retornar funções do sistema
 import tkinter as tk # biblioteca utilizada para gerar interfaces 
 from tkinter import filedialog # biblioteca responsável por criar a tela de upload de arquivos
 
+client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+usarPortaLocal = input("Deseja usar uma porta local específica? (s/n): ").strip().lower()
+if usarPortaLocal == 's':
+    while True:
+        try:
+            porta_local = int(input("Digite a porta local (ex: 6001, 6002...): "))
+            client.bind(("0.0.0.0", porta_local))
+            print(f"Porta {porta_local} vinculada com sucesso.")
+            break
+        except OSError:
+            print(f"⚠️ Porta {porta_local} já está em uso. Tente outra.")
+else:
+    print("Porta local será escolhida automaticamente pelo sistema.")
+
+ip_servidor = input("Digite o IP do servidor: ").strip()
+porta_servidor = 55555
+
 # #
 # Função responsável por simular a perda de pacotes ao receber.
 # parametro (client) recebe a credencial do usuario
@@ -71,7 +89,6 @@ def fazerUpload():
 # Loop principal, responsável por manter o menu aberto
 # #
 while True:
-    client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # realiza a conexão com o servidor utilizando o protocolo UDP
 
     print("\n=== MENU ===")
     print("0 - Sair")
@@ -100,7 +117,7 @@ while True:
         # 3 - com base no retorno do servidor, o código realiza validações para ver se o servidor já terminou sua mensagem, e exibe o retorno para o usuario.
         # #
         case 1:
-            client.sendto("LIST".encode(), ('localhost', 55555))
+            client.sendto("LIST".encode(), (ip_servidor, porta_servidor))
             msgReceivedBytes, addressServer = client.recvfrom(1024)
 
             if msgReceivedBytes == b'EOF':
@@ -123,7 +140,7 @@ while True:
         case 2:
             while dontCloseDownloads:
                 msgClient = str(input("Qual arquivo gostaria de baixar? (arquivo.extensao): "))
-                client.sendto(msgClient.encode(), ('localhost', 55555))
+                client.sendto(msgClient.encode(), (ip_servidor, porta_servidor))
 
                 pacotesRecebidos = {}
                 with open(os.path.join('Downloads', msgClient), 'wb') as file:
@@ -200,7 +217,7 @@ while True:
 
                 # Envia comando de upload com o nome do arquivo
                 comando = f"UPLOAD {nome_arquivo}"
-                client.sendto(comando.encode(), ('localhost', 55555))
+                client.sendto(comando.encode(), (ip_servidor, porta_servidor))
 
                 client.settimeout(timeout)
                 print(f"Iniciando envio de {nome_arquivo} ({len(pacotes)} pacotes)...")
@@ -211,7 +228,7 @@ while True:
                     while proxNum < base + tamanhoJanela and proxNum < len(pacotes):
                         seq_bytes = proxNum.to_bytes(4, 'big')
                         pacote = seq_bytes + pacotes[proxNum]
-                        client.sendto(pacote, ('localhost', 55555))
+                        client.sendto(pacote, (ip_servidor, porta_servidor))
                         print(f"Enviado pacote {proxNum}")
                         proxNum += 1
 
@@ -227,7 +244,7 @@ while True:
                         proxNum = base  # reinicia do último ACK válido
 
                 # Envia EOF
-                client.sendto(b'EOF', ('localhost', 55555))
+                client.sendto(b'EOF', (ip_servidor, porta_servidor))
                 print(f"{nome_arquivo} enviado com sucesso.\n")
 
         # #
