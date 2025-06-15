@@ -1,6 +1,6 @@
-import socket
-import os
-import threading
+import socket # biblioteca responsável por realizar as conexões entre servidor e cliente
+import os # biblioteca utilizada para retornar funções do sistema
+import threading # biblioteca responsável por permitir que o funcionamento ocorra em threads
 
 #Diretorio base onde fica os arquivos
 basedir = 'Arquivos/'
@@ -11,9 +11,9 @@ server.bind(('localhost', 55555))
 print('Servidor escutando')
 
 #váriaveis de controle do Go-Back-N
-tamanhoJanela = 4
+tamanhoJanela = 4 # quantidade de pacotes enviados por janela
 timeout = 5  # segundos
-tamanho_pacote = 1024
+tamanho_pacote = 1024 # tamanho do pacote em bytes
 
 base = 0 #primeiro numero da sequência
 proxNum = 0 #próximo numero a ser enviado
@@ -23,7 +23,10 @@ pacotes = []
 
 socket.timeout(timeout)
 
-# Envia um pacote com numeração sequencial (4 bytes de header + dados)
+# #
+# Função responsável por pacotes com numeracao sequencial.
+# parametro (numSeq) recebe o numero do pacote que será enviado
+# #
 def enviaPacote(numSeq):
     if numSeq < len(pacotes):
         seq_bytes = numSeq.to_bytes(4, byteorder='big')
@@ -31,6 +34,10 @@ def enviaPacote(numSeq):
         server.sendto(mensagem, addClient)
         print(f"Enviado pacote n{numSeq}")
 
+# #
+# Função responsável por receber os ACKs.
+# dependendo do recebimento do ACK, a janela é reenvidada
+# #
 def recebeAck():
     global base
     while base < len(pacotes):
@@ -46,8 +53,13 @@ def recebeAck():
             print("Timeout! Reenviando janela...")
             eventAck.set()
 
+# #
+# Função responsável por enviar os arquivos
+# parametro (nome_arquivo) recebe o nome do arquivo que irá ser enviado
+# a lógica utilizada para o envio é o protocolo Go Back N
+# #
 def enviaArquivo(nome_arquivo):
-    global pacotes, base, proxNum
+    global pacotes, base, proxNum # variaveis de controle
 
     # Lê o arquivo e divide em pacotes
     try:
@@ -79,10 +91,13 @@ def enviaArquivo(nome_arquivo):
 
     ack_thread.join()
 
-    # Envia EOF
+    # Envia EOF, sinalizando o final do arquivo
     server.sendto(b'EOF', addClient)
     print("Arquivo enviado com sucesso.")
 
+# #
+# Loop principal, responsável por manter a o fluxo e o servidor em andamento, para recebimento e envio de arquivos 
+# #
 while True:
     msgClientBytes, addressClient = server.recvfrom(1024) #recebe a mensagem do cliente e armazena tanto a mensagem como também o endereço
     addClient = addressClient #armazena o endereço do cliente em outra variavel que irá ser utilizada no fluxo
