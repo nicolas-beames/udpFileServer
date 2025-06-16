@@ -44,7 +44,7 @@ def recebeAck():
     global base
     while base < len(pacotes):
         try:
-            # server.settimeout(timeout)
+            server.settimeout(timeout)
             ackBytes, _ = server.recvfrom(1024)
             ackNum = int.from_bytes(ackBytes, byteorder='big')
             print(f"ACK n{ackNum} recebido")
