@@ -23,8 +23,6 @@ eventAck = threading.Event()
 addClient = None
 pacotes = []
 
-socket.timeout(timeout)
-
 # #
 # Função responsável por pacotes com numeracao sequencial.
 # parametro (numSeq) recebe o numero do pacote que será enviado
@@ -41,7 +39,7 @@ def enviaPacote(numSeq):
 # dependendo do recebimento do ACK, a janela é reenvidada
 # #
 def recebeAck():
-    global base
+    global base, proxNum
     while base < len(pacotes):
         try:
             server.settimeout(timeout)
@@ -53,6 +51,7 @@ def recebeAck():
                 eventAck.set()
         except socket.timeout:
             print("Timeout! Reenviando janela...")
+            proxNum = base  # Reinicia para reenviar janela
             eventAck.set()
 
 # #
@@ -93,9 +92,33 @@ def enviaArquivo(nome_arquivo):
 
     ack_thread.join()
 
-    # Envia EOF, sinalizando o final do arquivo
-    server.sendto(b'EOF', addClient)
-    print("Arquivo enviado com sucesso.")
+    # --- NOVO: Lógica para enviar EOF e esperar ACK ---
+    server.settimeout(timeout) # Define um timeout para o servidor esperar o ACK do EOF
+    eof_enviado = False
+    tentativas_eof = 0
+    max_tentativas_eof = 5 # Tenta enviar o EOF algumas vezes
+
+    while not eof_enviado and tentativas_eof < max_tentativas_eof:
+        try:
+            server.sendto(b'EOF', addClient)
+            print("EOF enviado. Esperando ACK_EOF...")
+            ack_eof, _ = server.recvfrom(1024)
+            if ack_eof == b'ACK_EOF':
+                print("ACK_EOF recebido. Arquivo enviado com sucesso.")
+                eof_enviado = True
+            else:
+                print(f"ACK_EOF esperado, mas recebeu: {ack_eof}. Reenviando EOF.")
+        except socket.timeout:
+            print("Timeout esperando ACK_EOF. Reenviando EOF.")
+        except Exception as e:
+            print(f"Erro ao enviar/receber ACK_EOF: {e}. Reenviando EOF.")
+        tentativas_eof += 1
+
+    if not eof_enviado:
+        print("Falha ao enviar EOF após múltiplas tentativas.")
+    
+    server.settimeout(None) # Volta para timeout padrão (bloqueante)
+
 
 # #
 # Loop principal, responsável por manter a o fluxo e o servidor em andamento, para recebimento e envio de arquivos 

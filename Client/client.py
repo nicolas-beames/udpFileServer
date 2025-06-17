@@ -6,19 +6,6 @@ from tkinter import filedialog # biblioteca responsável por criar a tela de upl
 
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-usarPortaLocal = input("Deseja usar uma porta local específica? (s/n): ").strip().lower()
-if usarPortaLocal == 's':
-    while True:
-        try:
-            porta_local = int(input("Digite a porta local (ex: 6001, 6002...): "))
-            client.bind(("0.0.0.0", porta_local))
-            print(f"Porta {porta_local} vinculada com sucesso.")
-            break
-        except OSError:
-            print(f"⚠️ Porta {porta_local} já está em uso. Tente outra.")
-else:
-    print("Porta local será escolhida automaticamente pelo sistema.")
-
 ip_servidor = input("Digite o IP do servidor: ").strip()
 porta_servidor = 55555
 
@@ -28,13 +15,20 @@ porta_servidor = 55555
 # parametro (buffer_size) recebe a quantidade de bytes que a mensagen irá receber
 # parametro (loss_rate) tem como valor "0.1", que simula a probabilidade de perda de 10%
 # #
-def recebeComPerda(client, buffer_size, loss_rate=0.1):
-    while True:
+def recebeComPerda(client, buffer_size, loss_rate=0.1, timeout=5):
+    client.settimeout(timeout) # Define o timeout para a chamada recvfrom
+    try:
         msg, addr = client.recvfrom(buffer_size)
         if random.random() < loss_rate:
             print("** Pacote PERDIDO (simulado) **")
-            continue  # ignora este pacote, simulando perda
+            return None, None # Simula a perda retornando None
         return msg, addr
+    except socket.timeout:
+        # print("Timeout na recepção (simulado).") # O loop principal tratará disso
+        return None, None
+    except Exception as e:
+        print(f"Erro ao receber dados: {e}")
+        return None, None
 
 # #
 # Função responsável por simular a parda de ACK ao enviar.
@@ -142,40 +136,98 @@ while True:
                 msgClient = str(input("Qual arquivo gostaria de baixar? (arquivo.extensao): "))
                 client.sendto(msgClient.encode(), (ip_servidor, porta_servidor))
 
+                client.settimeout(5) # Ajuste este timeout se necessário
+
                 pacotesRecebidos = {}
-                with open(os.path.join('Downloads', msgClient), 'wb') as file:
-                    while True:
-                        msgReceivedBytes, addressServer = client.recvfrom(2048)
+                esperado = 0 # O próximo número de sequência esperado
+                arquivo_completo = False
+                os.makedirs('Downloads', exist_ok=True)
+                
+                nome_arquivo_temp = msgClient + ".part" 
 
-                        if msgReceivedBytes == b'EOF':
-                            break
+                with open(os.path.join('Downloads', nome_arquivo_temp), 'wb') as file:
+                    while not arquivo_completo:
+                        try:
+                            resultado = recebeComPerda(client, 2048, loss_rate=0.1, timeout=5) 
+                            if resultado == (None, None): 
+                                print("Esperando por pacote. Timeout ou perda simulada. Reenviando último ACK.")
+                                if esperado > 0: 
+                                    ack_anterior = (esperado - 1).to_bytes(4, byteorder='big')
+                                    client.sendto(ack_anterior, (ip_servidor, porta_servidor))
+                                    print(f"ACK {esperado - 1} reenviado devido a timeout/perda.")
+                                continue 
 
-                        if msgReceivedBytes.startswith(b'ERRO'):
-                            print(msgReceivedBytes.decode())
-                            break
+                            msgReceivedBytes, addressServer = resultado
 
-                        numero_pacote = int.from_bytes(msgReceivedBytes[:4], byteorder='big')
-                        dados_pacote = msgReceivedBytes[4:]
+                            if msgReceivedBytes.startswith(b'ERRO'):
+                                print(msgReceivedBytes.decode())
+                                break 
 
-                        print(f'Pacote #{numero_pacote} recebido com {len(dados_pacote)} bytes')
+                            if msgReceivedBytes == b'EOF':
+                                print("Mensagem EOF recebida. Finalizando download.")
+                                arquivo_completo = True 
+                                client.sendto(b'ACK_EOF', addressServer) 
+                                # NÃO COLOQUE O BREAK AQUI SE A ESCRITA ESTIVER FORA DO 'while not arquivo_completo'!
+                                # O 'break' faria com que o 'with open' fechasse o arquivo antes de você escrever.
+                                continue # Continue o loop para que ele termine na próxima iteração pela condição 'not arquivo_completo'
+                            
+                            numero_pacote = int.from_bytes(msgReceivedBytes[:4], byteorder='big')
+                            dados_pacote = msgReceivedBytes[4:]
 
-                        pacotesRecebidos[numero_pacote] = dados_pacote
+                            if numero_pacote == esperado:
+                                print(f'Pacote #{numero_pacote} recebido com {len(dados_pacote)} bytes')
+                                pacotesRecebidos[numero_pacote] = dados_pacote 
+                                enviaAckComPerda(client, numero_pacote.to_bytes(4, byteorder='big'), addressServer)
+                                esperado += 1 
+                            else:
+                                if esperado > 0:
+                                    enviaAckComPerda(client, (esperado - 1).to_bytes(4, byteorder='big'), addressServer)
+                                else:
+                                    print(f"Pacote {numero_pacote} recebido mas esperado {esperado}. Ignorando.")
 
-                        ack = numero_pacote.to_bytes(4, byteorder='big')
-                        client.sendto(ack, addressServer)
+                        except socket.timeout:
+                            print("Timeout no cliente. Solicitando reenvio de pacotes...")
+                            if esperado > 0:
+                                ack_para_reenviar = (esperado - 1).to_bytes(4, byteorder='big')
+                                client.sendto(ack_para_reenviar, (ip_servidor, porta_servidor))
+                                print(f"ACK {esperado - 1} reenviado para solicitar retransmissão.")
+                            else: 
+                                print("Primeiro pacote não chegou ou houve timeout inicial. Reenviando requisição do arquivo.")
+                                client.sendto(msgClient.encode(), (ip_servidor, porta_servidor))
 
-                        print(f"ACK N: {numero_pacote} enviado")
 
-                    # Depois de receber todos os pacotes, escreve o arquivo na ordem correta
-                    for i in range(len(pacotesRecebidos)):
-                        file.write(pacotesRecebidos[i])
-                escolha = str(input('Arquivo recebido com sucesso, gostaria de baixar mais algum? (s/n): '))
+                    # ESTE BLOCO DE ESCRITA FOI MOVIDO PARA DENTRO DO 'with open'
+                    # E SERÁ EXECUTADO APENAS UMA VEZ APÓS O FIM DO LOOP DE RECEBIMENTO
+                    if arquivo_completo:
+                        print(f"Escrevendo {esperado} pacotes no arquivo.")
+                        for i in range(esperado):
+                            if i in pacotesRecebidos:
+                                file.write(pacotesRecebidos[i])
+                            else:
+                                print(f"AVISO: Pacote {i} ausente. O arquivo pode estar corrompido.")
+                                break
+                # O 'with open' fecha o arquivo automaticamente aqui, após o bloco if arquivo_completo:
 
+                # A renomeação deve ocorrer FORA do 'with open' (depois que o arquivo está fechado)
+                if arquivo_completo:
+                    try:
+                        os.rename(os.path.join('Downloads', nome_arquivo_temp), os.path.join('Downloads', msgClient))
+                        print(f"Arquivo '{msgClient}' salvo com sucesso em 'Downloads/'.")
+                    except OSError as e:
+                        print(f"Erro ao renomear arquivo: {e}")
+                else:
+                    print(f"Download de '{msgClient}' não foi concluído.")
+                    if os.path.exists(os.path.join('Downloads', nome_arquivo_temp)):
+                        os.remove(os.path.join('Downloads', nome_arquivo_temp))
+
+
+                client.settimeout(None) 
+
+                escolha = str(input('Gostaria de baixar mais algum arquivo? (s/n): '))
                 if escolha.lower() == "s":
                     dontCloseDownloads = True
                 else:
                     dontCloseDownloads = False
-                    pass
 
         # #
         # Caso o usuario selecione a opção 3 a seguinte lógica é executada:
@@ -221,8 +273,6 @@ while True:
 
                 client.settimeout(timeout)
                 print(f"Iniciando envio de {nome_arquivo} ({len(pacotes)} pacotes)...")
-
-                acks_recebidos = set()
 
                 while base < len(pacotes):
                     while proxNum < base + tamanhoJanela and proxNum < len(pacotes):
