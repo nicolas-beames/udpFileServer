@@ -2,7 +2,8 @@ import sys
 import os
 import random
 import socket
-from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog, QMessageBox
+import time
+from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog, QInputDialog, QMessageBox, QLineEdit
 from PySide6.QtGui import QStandardItemModel
 from PySide6.QtCore import QFile, Qt
 
@@ -10,7 +11,6 @@ sys.path.append("../Ui")
 from ui_client import Ui_MainWindow
 
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-ip_servidor, porta_servidor = "192.168.1.33", 55555
 
 
 class MainWindow(QMainWindow):
@@ -18,6 +18,12 @@ class MainWindow(QMainWindow):
         super(MainWindow, self).__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+
+        text, ok = QInputDialog.getText(self, "QInputDialog.getText()", "IP do Servidor:", QLineEdit.Normal)
+        if ok and text:
+            self.ip_servidor = str(text)
+            self.porta_servidor = 55555
+        
         self.ui.but_upload.clicked.connect(self.upload_clicked)
         self.ui.but_atualizar.clicked.connect(self.atualizar_clicked)
         self.ui.but_baixar.clicked.connect(self.baixar_clicked)
@@ -25,7 +31,7 @@ class MainWindow(QMainWindow):
         
     def atualizar_clicked(self):
         print("Atualizar Clicado")
-        client.sendto("LIST".encode(), (ip_servidor, porta_servidor))
+        client.sendto("LIST".encode(), (self.ip_servidor, self.porta_servidor))
         msgReceivedBytes, addressServer = client.recvfrom(1024)
 
         if msgReceivedBytes.startswith(b'ERRO'):
@@ -35,12 +41,12 @@ class MainWindow(QMainWindow):
         if msgReceivedBytes.startswith(b'O servidor'):
             pass
         else:
-            print(msgReceivedBytes)
+            #print(msgReceivedBytes)
             lista = str(msgReceivedBytes).split("\'")
             lista = list(lista)
             for item in lista:
-                print(f'item = {item}')
-                print(f'type = {type(item)}')
+                #print(f'item = {item}')
+                #print(f'type = {type(item)}')
                 if item.startswith(','):
                     lista.remove(item)
             lista.pop()
@@ -71,10 +77,19 @@ class MainWindow(QMainWindow):
                     destino = os.path.join(pastaDestino, nomeArquivo)
                     criaArquivo(file, destino)
             self.atualizar_servidor()
+            self.atualizar_clicked()
 
     def baixar_clicked(self):
         msgClient = str(self.ui.SrvFiles.currentIndex().data())
-        client.sendto(msgClient.encode(), (ip_servidor, porta_servidor))
+        client.sendto(msgClient.encode(), (self.ip_servidor, self.porta_servidor))
+
+        #client.sendto("TAMANHO".encode(), self.ip_servidor, self.porta_servidor)
+        tamanho_pacotes, addressServer = client.recvfrom(1024)
+        tamanho_pacotes = int(tamanho_pacotes.decode())
+
+        self.ui.prog.reset()
+        self.ui.prog.setRange(0, tamanho_pacotes)
+        print(f'numero de pacotes: {tamanho_pacotes}')
 
         client.settimeout(5) # Ajuste este timeout se necessário
 
@@ -94,7 +109,7 @@ class MainWindow(QMainWindow):
 
                         if esperado > 0: 
                             ack_anterior = (esperado - 1).to_bytes(4, byteorder='big')
-                            client.sendto(ack_anterior, (ip_servidor, porta_servidor))
+                            client.sendto(ack_anterior, (self.ip_servidor, self.porta_servidor))
                             print(f"ACK {esperado - 1} reenviado devido a timeout/perda.")
                         continue 
 
@@ -118,6 +133,8 @@ class MainWindow(QMainWindow):
                         pacotesRecebidos[numero_pacote] = dados_pacote 
                         enviaAckComPerda(client, numero_pacote.to_bytes(4, byteorder='big'), addressServer)
                         esperado += 1 
+                        self.ui.prog.setValue(esperado + 1)
+                        time.sleep(0.5)
                     else:
                         if esperado > 0:
                             enviaAckComPerda(client, (esperado - 1).to_bytes(4, byteorder='big'), addressServer)
@@ -128,11 +145,11 @@ class MainWindow(QMainWindow):
                     print("Timeout no cliente. Solicitando reenvio de pacotes...")
                     if esperado > 0:
                         ack_para_reenviar = (esperado - 1).to_bytes(4, byteorder='big')
-                        client.sendto(ack_para_reenviar, (ip_servidor, porta_servidor))
+                        client.sendto(ack_para_reenviar, (self.ip_servidor, self.porta_servidor))
                         print(f"ACK {esperado - 1} reenviado para solicitar retransmissão.")
                     else: 
                         print("Primeiro pacote não chegou ou houve timeout inicial. Reenviando requisição do arquivo.")
-                        client.sendto(msgClient.encode(), (ip_servidor, porta_servidor))
+                        client.sendto(msgClient.encode(), (self.ip_servidor, self.porta_servidor))
                 
 
             if arquivo_completo:
@@ -200,7 +217,7 @@ class MainWindow(QMainWindow):
 
             # Envia comando de upload com o nome do arquivo
             comando = f"UPLOAD {nome_arquivo}"
-            client.sendto(comando.encode(), (ip_servidor, porta_servidor))
+            client.sendto(comando.encode(), (self.ip_servidor, self.porta_servidor))
 
             client.settimeout(timeout)
             print(f"Iniciando envio de {nome_arquivo} ({len(pacotes)} pacotes)...")
@@ -209,7 +226,7 @@ class MainWindow(QMainWindow):
                 while proxNum < base + tamanhoJanela and proxNum < len(pacotes):
                     seq_bytes = proxNum.to_bytes(4, 'big')
                     pacote = seq_bytes + pacotes[proxNum]
-                    client.sendto(pacote, (ip_servidor, porta_servidor))
+                    client.sendto(pacote, (self.ip_servidor, self.porta_servidor))
                     print(f"Enviado pacote {proxNum}")
                     proxNum += 1
 
@@ -225,7 +242,7 @@ class MainWindow(QMainWindow):
                     proxNum = base  # reinicia do último ACK válido
 
             # Envia EOF
-            client.sendto(b'EOF', (ip_servidor, porta_servidor))
+            client.sendto(b'EOF', (self.ip_servidor, self.porta_servidor))
             print(f"{nome_arquivo} enviado com sucesso.\n")
     
 
@@ -265,6 +282,7 @@ def criaArquivo(origem, destino):
             if not chunk:
                 break
             destinoArquivo.write(chunk)
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

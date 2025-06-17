@@ -6,8 +6,8 @@ import threading # biblioteca responsável por permitir que o funcionamento ocor
 basedir = 'Arquivos/'
 
 hostName = socket.gethostname()
-ipAdd = socket.gethostbyname(hostName)
-
+#ipAdd = socket.gethostbyname(hostName)
+ipAdd = 'localhost'
 server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 server.bind((ipAdd, 55555))
 print(f'Servidor escutando no ip: {ipAdd} : 55555')
@@ -72,6 +72,8 @@ def enviaArquivo(nome_arquivo):
         return
 
     print(f"Total de pacotes: {len(pacotes)}")
+
+    server.sendto(str(len(pacotes)).encode(), addressClient)
 
     base = 0
     proxNum = 0
