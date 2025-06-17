@@ -143,9 +143,7 @@ while True:
                 arquivo_completo = False
                 os.makedirs('Downloads', exist_ok=True)
                 
-                nome_arquivo_temp = msgClient + ".part" 
-
-                with open(os.path.join('Downloads', nome_arquivo_temp), 'wb') as file:
+                with open(os.path.join('Downloads', msgClient), 'wb') as file:
                     while not arquivo_completo:
                         try:
                             resultado = recebeComPerda(client, 2048, loss_rate=0.1, timeout=5) 
@@ -167,9 +165,7 @@ while True:
                                 print("Mensagem EOF recebida. Finalizando download.")
                                 arquivo_completo = True 
                                 client.sendto(b'ACK_EOF', addressServer) 
-                                # NÃO COLOQUE O BREAK AQUI SE A ESCRITA ESTIVER FORA DO 'while not arquivo_completo'!
-                                # O 'break' faria com que o 'with open' fechasse o arquivo antes de você escrever.
-                                continue # Continue o loop para que ele termine na próxima iteração pela condição 'not arquivo_completo'
+                                continue # continua o loop para que ele termine na próxima condição
                             
                             numero_pacote = int.from_bytes(msgReceivedBytes[:4], byteorder='big')
                             dados_pacote = msgReceivedBytes[4:]
@@ -196,8 +192,6 @@ while True:
                                 client.sendto(msgClient.encode(), (ip_servidor, porta_servidor))
 
 
-                    # ESTE BLOCO DE ESCRITA FOI MOVIDO PARA DENTRO DO 'with open'
-                    # E SERÁ EXECUTADO APENAS UMA VEZ APÓS O FIM DO LOOP DE RECEBIMENTO
                     if arquivo_completo:
                         print(f"Escrevendo {esperado} pacotes no arquivo.")
                         for i in range(esperado):
@@ -206,19 +200,15 @@ while True:
                             else:
                                 print(f"AVISO: Pacote {i} ausente. O arquivo pode estar corrompido.")
                                 break
-                # O 'with open' fecha o arquivo automaticamente aqui, após o bloco if arquivo_completo:
 
-                # A renomeação deve ocorrer FORA do 'with open' (depois que o arquivo está fechado)
                 if arquivo_completo:
-                    try:
-                        os.rename(os.path.join('Downloads', nome_arquivo_temp), os.path.join('Downloads', msgClient))
-                        print(f"Arquivo '{msgClient}' salvo com sucesso em 'Downloads/'.")
-                    except OSError as e:
-                        print(f"Erro ao renomear arquivo: {e}")
+                    os.path.join('Downloads', msgClient)
+                    print(f"Arquivo '{msgClient}' salvo com sucesso em 'Downloads/'.")
+                    
                 else:
                     print(f"Download de '{msgClient}' não foi concluído.")
-                    if os.path.exists(os.path.join('Downloads', nome_arquivo_temp)):
-                        os.remove(os.path.join('Downloads', nome_arquivo_temp))
+                    if os.path.exists(os.path.join('Downloads', msgClient)):
+                        os.remove(os.path.join('Downloads', msgClient))
 
 
                 client.settimeout(None) 
