@@ -32,32 +32,45 @@ class MainWindow(QMainWindow):
             print("Erro!")
 
         # Tratativa para a lista dos arquivos recebida do Srv
-        lista = str(msgReceivedBytes).split("\'")
-        lista = list(lista)
-        for item in lista:
-            if item.endswith('Entry \\') or not item.endswith("\\"):
-                lista.remove(item)
-        lista.pop()
-        lista.pop(0)
+        if msgReceivedBytes.startswith(b'O servidor'):
+            pass
+        else:
+            print(msgReceivedBytes)
+            lista = str(msgReceivedBytes).split("\'")
+            lista = list(lista)
+            for item in lista:
+                print(f'item = {item}')
+                print(f'type = {type(item)}')
+                if item.startswith(','):
+                    lista.remove(item)
+            lista.pop()
+            lista.pop(0)
 
-        # Verifica se o item ja está na lista
-        # caso não estiver ele insere
-        for item in lista:
-            if not self.ui.SrvFiles.findItems(item, Qt.MatchFixedString | Qt.MatchCaseSensitive):
-                self.ui.SrvFiles.addItem(str(item))
+            # Verifica se o item ja está na lista
+            # caso não estiver ele insere
+            for item in lista:
+                if not self.ui.SrvFiles.findItems(item, Qt.MatchFixedString | Qt.MatchCaseSensitive):
+                    self.ui.SrvFiles.addItem(str(item))
 
     def upload_clicked(self):
         print("DEBUG: Upload Clicado")
         upload_selecionar = QFileDialog(self)
-        upload_selecionar = QFileDialog(self)
-        upload_selecionar.setDirectory(r'C:\images')
         upload_selecionar.setFileMode(QFileDialog.FileMode.ExistingFiles)
         upload_selecionar.setViewMode(QFileDialog.ViewMode.List)
         if upload_selecionar.exec():
             filenames = upload_selecionar.selectedFiles()
             if filenames:
+                print(f'filenames: {filenames}')
+                for file in filenames:
+                    print(f'file: {file}')
                 #self.file_list.addItems([str(Path(filename)) for filename in filenames])
-                pass
+                    nomeArquivo = os.path.basename(file)
+                    pastaDestino = "Uploads"
+                    os.makedirs(pastaDestino, exist_ok=True)
+                
+                    destino = os.path.join(pastaDestino, nomeArquivo)
+                    criaArquivo(file, destino)
+            self.atualizar_servidor()
 
     def baixar_clicked(self):
         msgClient = str(self.ui.SrvFiles.currentIndex().data())
@@ -154,6 +167,66 @@ class MainWindow(QMainWindow):
                 print("Operação concluida com erro! Finalizando...")
 
         client.settimeout(None) 
+
+    def atualizar_servidor(self):
+        print('Enviando arquivos da pasta Uploads para o servidor com Go-Back-N...')
+
+        arquivos = os.listdir("Uploads")
+        if not arquivos:
+            print("Nenhum arquivo para enviar.")
+            dlg_erro = QMessageBox(self)
+            dlg_erro.setWindowTitle("Erro!")
+            dlg_erro.setText("Ocorreu um erro! Nenhum arquivo para enviar...")
+            btn_ok = dlg_erro.exec()
+
+            if btn_ok == QMessageBox.Ok:
+                print("Nenhum arquivo para enviar! Finalizando...")
+            
+
+        for nome_arquivo in arquivos:
+            caminho_arquivo = os.path.join("Uploads", nome_arquivo)
+            try:
+                with open(caminho_arquivo, 'rb') as file:
+                    dados = file.read()
+                    pacotes = [dados[i:i + 1024] for i in range(0, len(dados), 1024)]
+            except FileNotFoundError:
+                print(f"Arquivo {nome_arquivo} não encontrado.")
+                continue
+
+            base = 0
+            proxNum = 0
+            tamanhoJanela = 4
+            timeout = 2
+
+            # Envia comando de upload com o nome do arquivo
+            comando = f"UPLOAD {nome_arquivo}"
+            client.sendto(comando.encode(), (ip_servidor, porta_servidor))
+
+            client.settimeout(timeout)
+            print(f"Iniciando envio de {nome_arquivo} ({len(pacotes)} pacotes)...")
+
+            while base < len(pacotes):
+                while proxNum < base + tamanhoJanela and proxNum < len(pacotes):
+                    seq_bytes = proxNum.to_bytes(4, 'big')
+                    pacote = seq_bytes + pacotes[proxNum]
+                    client.sendto(pacote, (ip_servidor, porta_servidor))
+                    print(f"Enviado pacote {proxNum}")
+                    proxNum += 1
+
+                try:
+                    ackBytes, _ = client.recvfrom(1024)
+                    ackNum = int.from_bytes(ackBytes, byteorder='big')
+                    print(f"ACK {ackNum} recebido")
+
+                    if ackNum >= base:
+                        base = ackNum + 1
+                except socket.timeout:
+                    print("Timeout. Reenviando janela...")
+                    proxNum = base  # reinicia do último ACK válido
+
+            # Envia EOF
+            client.sendto(b'EOF', (ip_servidor, porta_servidor))
+            print(f"{nome_arquivo} enviado com sucesso.\n")
     
 
 # #
@@ -184,6 +257,14 @@ def recebeComPerda(client, buffer_size, loss_rate=0.1, timeout=5):
     except Exception as e:
         print(f"Erro ao receber dados: {e}")
         return None, None
+
+def criaArquivo(origem, destino):
+    with open(origem, 'rb') as origemArquivo, open(destino,'wb') as destinoArquivo:
+        while True:
+            chunk = origemArquivo.read(1024 * 1024)
+            if not chunk:
+                break
+            destinoArquivo.write(chunk)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
